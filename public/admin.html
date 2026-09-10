@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Admin Panel</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="container header-inner">
+
+        <a href="/" class="logo">
+            학교 커뮤니티
+        </a>
+
+        <button id="logoutButton">
+            로그아웃
+        </button>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <section id="loginSection" class="card">
+
+        <h1>관리자 로그인</h1>
+
+        <form id="loginForm">
+
+            <input
+                id="username"
+                placeholder="관리자 아이디"
+                required
+            >
+
+            <input
+                id="password"
+                type="password"
+                placeholder="관리자 비밀번호"
+                required
+            >
+
+            <button type="submit">
+                로그인
+            </button>
+
+        </form>
+
+        <div id="loginMessage"></div>
+
+    </section>
+
+
+    <section
+        id="adminSection"
+        class="admin-section hidden"
+    >
+
+        <h1>Admin Panel</h1>
+
+
+        <div class="card">
+
+            <div class="admin-title">
+                신고 관리
+            </div>
+
+            <div id="reports">
+                불러오는 중...
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="admin-title">
+                게시글 관리
+            </div>
+
+            <div id="adminPosts">
+                불러오는 중...
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="admin-title">
+                댓글 관리
+            </div>
+
+            <div id="adminComments">
+                불러오는 중...
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+<script src="/js/admin.js"></script>
+
+</body>
+</html>

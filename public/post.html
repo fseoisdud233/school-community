@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>게시글</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="container header-inner">
+
+        <a href="/" class="logo">
+            학교 커뮤니티
+        </a>
+
+        <a href="/write.html" class="button">
+            글쓰기
+        </a>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <article id="post"></article>
+
+    <section class="comments">
+
+        <h2>댓글</h2>
+
+        <div id="commentList">
+            불러오는 중...
+        </div>
+
+        <form id="commentForm">
+
+            <input
+                id="commentAuthor"
+                placeholder="닉네임"
+                maxlength="20"
+                required
+            >
+
+            <input
+                id="commentPassword"
+                type="password"
+                placeholder="삭제 비밀번호"
+                minlength="4"
+                maxlength="100"
+                required
+            >
+
+            <textarea
+                id="commentContent"
+                placeholder="댓글"
+                maxlength="1000"
+                required
+            ></textarea>
+
+            <button type="submit">
+                댓글 작성
+            </button>
+
+        </form>
+
+        <div id="commentMessage"></div>
+
+    </section>
+
+</main>
+
+<script src="/js/post.js"></script>
+
+</body>
+</html>

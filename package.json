@@ -1,0 +1,17 @@
+{
+  "name": "school-community",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "bcryptjs": "^3.0.2",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "vercel": "^48.0.0"
+  }
+}

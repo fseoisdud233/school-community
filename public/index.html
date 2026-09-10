@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>학교 커뮤니티</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+<header>
+    <div class="container header-inner">
+        <a href="/" class="logo">학교 커뮤니티</a>
+
+        <a href="/write.html" class="button">
+            글쓰기
+        </a>
+    </div>
+</header>
+
+<main class="container">
+
+    <div class="search-box">
+
+        <form id="searchForm">
+            <input
+                id="searchInput"
+                type="text"
+                maxlength="100"
+                placeholder="검색어를 입력하세요"
+            >
+
+            <button type="submit">
+                검색
+            </button>
+
+            <button
+                type="button"
+                id="resetButton"
+            >
+                전체글
+            </button>
+        </form>
+
+    </div>
+
+    <div id="postList">
+        불러오는 중...
+    </div>
+
+</main>
+
+<script src="/js/index.js"></script>
+
+</body>
+</html>

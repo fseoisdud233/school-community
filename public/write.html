@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>글쓰기</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="container header-inner">
+
+        <a href="/" class="logo">
+            학교 커뮤니티
+        </a>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <div class="card">
+
+        <h1>글쓰기</h1>
+
+        <form id="writeForm">
+
+            <label>
+                닉네임
+
+                <input
+                    id="authorName"
+                    maxlength="20"
+                    required
+                >
+            </label>
+
+            <label>
+                제목
+
+                <input
+                    id="title"
+                    maxlength="100"
+                    required
+                >
+            </label>
+
+            <label>
+                내용
+
+                <textarea
+                    id="content"
+                    maxlength="5000"
+                    required
+                ></textarea>
+            </label>
+
+            <label>
+                삭제 비밀번호
+
+                <input
+                    id="password"
+                    type="password"
+                    minlength="4"
+                    maxlength="100"
+                    required
+                >
+            </label>
+
+            <label>
+                이미지 / 영상
+
+                <input
+                    id="media"
+                    type="file"
+                    accept="
+                        image/jpeg,
+                        image/png,
+                        image/gif,
+                        image/webp,
+                        video/mp4,
+                        video/webm,
+                        video/ogg
+                    "
+                >
+
+                <small>
+                    최대 10MB · 이미지 또는 영상 1개
+                </small>
+            </label>
+
+            <button
+                type="submit"
+                class="button full"
+            >
+                작성
+            </button>
+
+        </form>
+
+        <div id="message"></div>
+
+    </div>
+
+</main>
+
+<script src="/js/write.js"></script>
+
+</body>
+</html>
