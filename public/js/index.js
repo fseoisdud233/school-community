@@ -1,6 +1,8 @@
+```javascript
 const postList = document.getElementById("postList");
 const searchInput = document.getElementById("searchInput");
-const searchButton = document.getElementById("searchButton");
+const searchForm = document.getElementById("searchForm");
+const resetButton = document.getElementById("resetButton");
 
 async function loadPosts(query = "") {
     postList.innerHTML = "<p>불러오는 중...</p>";
@@ -19,7 +21,9 @@ async function loadPosts(query = "") {
         console.log("게시글 데이터:", data);
 
         if (!res.ok) {
-            throw new Error(data.error || "게시글을 불러오지 못했습니다.");
+            throw new Error(
+                data.error || "게시글을 불러오지 못했습니다."
+            );
         }
 
         postList.innerHTML = "";
@@ -51,7 +55,7 @@ async function loadPosts(query = "") {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("게시글 로드 오류:", error);
 
         postList.innerHTML = `
             <p>
@@ -72,18 +76,28 @@ function formatDate(date) {
     return new Date(date).toLocaleString("ko-KR");
 }
 
-if (searchButton) {
-    searchButton.addEventListener("click", () => {
-        loadPosts(searchInput?.value.trim() || "");
+
+// 검색
+if (searchForm) {
+    searchForm.addEventListener("submit", event => {
+        event.preventDefault();
+
+        const query = searchInput.value.trim();
+
+        loadPosts(query);
     });
 }
 
-if (searchInput) {
-    searchInput.addEventListener("keydown", event => {
-        if (event.key === "Enter") {
-            loadPosts(searchInput.value.trim());
-        }
+
+// 전체글
+if (resetButton) {
+    resetButton.addEventListener("click", () => {
+        searchInput.value = "";
+        loadPosts();
     });
 }
 
+
+// 처음 접속했을 때 전체 게시글 불러오기
 loadPosts();
+```
