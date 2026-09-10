@@ -23,156 +23,691 @@ const adminComments =
     document.getElementById("adminComments");
 
 
-const TOKEN_KEY =
-    "admin_token";
+const tokenKey =
+    "school_admin_token";
 
 
 // =========================
 // 토큰
 // =========================
 
-function getToken() {
-    return localStorage.getItem(
-        TOKEN_KEY
-    );
+function token() {
+    return sessionStorage.getItem(tokenKey);
 }
 
 
-function setToken(token) {
-    localStorage.setItem(
-        TOKEN_KEY,
-        token
-    );
-}
-
-
-function removeToken() {
-    localStorage.removeItem(
-        TOKEN_KEY
-    );
-}
-
-
-// =========================
-// API 요청
-// =========================
-
-async function api(
-    url,
-    options = {}
-) {
-
-    const token =
-        getToken();
-
-
-    const headers = {
-        ...(options.headers || {})
+function adminHeaders() {
+    return {
+        "Content-Type": "application/json",
+        "Authorization":
+            `Bearer ${token()}`
     };
+}
 
 
-    if (token) {
+// =========================
+// HTML escape
+// =========================
 
-        headers.Authorization =
-            `Bearer ${token}`;
+function escapeHTML(value) {
 
-    }
-
-
-    if (
-        options.body &&
-        typeof options.body !==
-            "string"
-    ) {
-
-        headers["Content-Type"] =
-            "application/json";
-
-        options.body =
-            JSON.stringify(
-                options.body
-            );
-    }
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
 
 
-    const res =
+// =========================
+// 로그인
+// =========================
+
+async function login(username, password) {
+
+    const response =
         await fetch(
-            url,
+            "/api/admin?action=login",
             {
-                ...options,
-                headers
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    username,
+                    password
+                })
             }
         );
 
 
     const text =
-        await res.text();
+        await response.text();
 
 
     let data;
 
-
     try {
-
-        data =
-            JSON.parse(text);
-
-    }
-
-    catch {
-
+        data = JSON.parse(text);
+    } catch {
         throw new Error(
             "서버 응답을 읽을 수 없습니다."
         );
-
     }
 
 
-    if (
-        res.status === 401
-    ) {
-
-        removeToken();
-
-        showLogin();
-
-        throw new Error(
-            "관리자 로그인이 필요합니다."
-        );
-
-    }
-
-
-    if (!res.ok) {
-
+    if (!response.ok) {
         throw new Error(
             data.error ||
-            "요청에 실패했습니다."
+            "로그인에 실패했습니다."
         );
-
     }
 
 
-    return data;
+    sessionStorage.setItem(
+        tokenKey,
+        data.token
+    );
 }
 
 
 // =========================
-// 로그인 화면
+// 신고 불러오기
 // =========================
 
-function showLogin() {
+async function loadReports() {
 
-    loginSection.classList.remove(
-        "hidden"
+    reports.innerHTML =
+        "불러오는 중...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin?action=reports",
+                {
+                    headers:
+                        adminHeaders()
+                }
+            );
+
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+            throw new Error(
+                data.error ||
+                "신고를 불러오지 못했습니다."
+            );
+        }
+
+
+        if (
+            !Array.isArray(data) ||
+            data.length === 0
+        ) {
+
+            reports.innerHTML =
+                `<div class="empty">
+                    신고가 없습니다.
+                </div>`;
+
+            return;
+        }
+
+
+        reports.innerHTML =
+            data.map(report => `
+
+                <div class="admin-item">
+
+                    <div>
+
+                        <strong>
+                            신고 #${report.id}
+                        </strong>
+
+                        <p>
+                            대상:
+                            ${
+                                report.post_id
+                                    ? `게시글 #${report.post_id}`
+                                    : `댓글 #${report.comment_id}`
+                            }
+                        </p>
+
+                        <p>
+                            사유:
+                            ${escapeHTML(
+                                report.reason
+                            )}
+                        </p>
+
+                        <p>
+                            상태:
+                            ${escapeHTML(
+                                report.status
+                            )}
+                        </p>
+
+                    </div>
+
+
+                    <div class="admin-actions">
+
+                        ${
+                            report.post_id
+                            ? `
+                                <button
+                                    onclick="deleteAdminPost(
+                                        ${report.post_id}
+                                    )"
+                                >
+                                    게시글 삭제
+                                </button>
+                            `
+                            : ""
+                        }
+
+
+                        ${
+                            report.comment_id
+                            ? `
+                                <button
+                                    onclick="deleteAdminComment(
+                                        ${report.comment_id}
+                                    )"
+                                >
+                                    댓글 삭제
+                                </button>
+                            `
+                            : ""
+                        }
+
+
+                        <button
+                            onclick="resolveReport(
+                                ${report.id}
+                            )"
+                        >
+                            처리 완료
+                        </button>
+
+
+                        <button
+                            onclick="ignoreReport(
+                                ${report.id}
+                            )"
+                        >
+                            무시
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `).join("");
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        reports.innerHTML =
+            `<p>
+                ${escapeHTML(error.message)}
+            </p>`;
+
+    }
+}
+
+
+// =========================
+// 게시글 불러오기
+// =========================
+
+async function loadPosts() {
+
+    adminPosts.innerHTML =
+        "불러오는 중...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin?action=posts",
+                {
+                    headers:
+                        adminHeaders()
+                }
+            );
+
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+            throw new Error(
+                data.error ||
+                "게시글을 불러오지 못했습니다."
+            );
+        }
+
+
+        if (
+            !Array.isArray(data) ||
+            data.length === 0
+        ) {
+
+            adminPosts.innerHTML =
+                `<div class="empty">
+                    게시글이 없습니다.
+                </div>`;
+
+            return;
+        }
+
+
+        adminPosts.innerHTML =
+            data.map(post => `
+
+                <div class="admin-item">
+
+                    <div>
+
+                        <strong>
+                            ${escapeHTML(
+                                post.title
+                            )}
+                        </strong>
+
+                        <p>
+                            게시글 번호:
+                            #${post.id}
+                        </p>
+
+                        <p>
+                            작성자:
+                            ${escapeHTML(
+                                post.author_name
+                            )}
+                        </p>
+
+                        <p>
+                            조회수:
+                            ${post.views}
+                        </p>
+
+                        <p>
+                            작성일:
+                            ${formatDate(
+                                post.created_at
+                            )}
+                        </p>
+
+                    </div>
+
+
+                    <div class="admin-actions">
+
+                        <button
+                            onclick="deleteAdminPost(
+                                ${post.id}
+                            )"
+                        >
+                            게시글 삭제
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `).join("");
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        adminPosts.innerHTML =
+            `<p>
+                ${escapeHTML(error.message)}
+            </p>`;
+
+    }
+}
+
+
+// =========================
+// 댓글 불러오기
+// =========================
+
+async function loadComments() {
+
+    adminComments.innerHTML =
+        "불러오는 중...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin?action=comments",
+                {
+                    headers:
+                        adminHeaders()
+                }
+            );
+
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+            throw new Error(
+                data.error ||
+                "댓글을 불러오지 못했습니다."
+            );
+        }
+
+
+        if (
+            !Array.isArray(data) ||
+            data.length === 0
+        ) {
+
+            adminComments.innerHTML =
+                `<div class="empty">
+                    댓글이 없습니다.
+                </div>`;
+
+            return;
+        }
+
+
+        adminComments.innerHTML =
+            data.map(comment => `
+
+                <div class="admin-item">
+
+                    <div>
+
+                        <strong>
+                            댓글 #${comment.id}
+                        </strong>
+
+                        <p>
+                            게시글:
+                            #${comment.post_id}
+                        </p>
+
+                        <p>
+                            작성자:
+                            ${escapeHTML(
+                                comment.author_name
+                            )}
+                        </p>
+
+                        <p>
+                            내용:
+                            ${escapeHTML(
+                                comment.content
+                            )}
+                        </p>
+
+                        <p>
+                            작성일:
+                            ${formatDate(
+                                comment.created_at
+                            )}
+                        </p>
+
+                    </div>
+
+
+                    <div class="admin-actions">
+
+                        <button
+                            onclick="deleteAdminComment(
+                                ${comment.id}
+                            )"
+                        >
+                            댓글 삭제
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `).join("");
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        adminComments.innerHTML =
+            `<p>
+                ${escapeHTML(error.message)}
+            </p>`;
+
+    }
+}
+
+
+// =========================
+// 신고 처리
+// =========================
+
+async function resolveReport(id) {
+
+    await updateReport(
+        id,
+        "resolved"
     );
+
+    loadReports();
+}
+
+
+async function ignoreReport(id) {
+
+    await updateReport(
+        id,
+        "ignored"
+    );
+
+    loadReports();
+}
+
+
+async function updateReport(
+    id,
+    status
+) {
+
+    const response =
+        await fetch(
+            `/api/admin?action=report&id=${id}`,
+            {
+                method: "PATCH",
+
+                headers:
+                    adminHeaders(),
+
+                body: JSON.stringify({
+                    status
+                })
+            }
+        );
+
+
+    const data =
+        await response.json();
+
+
+    if (!response.ok) {
+
+        alert(
+            data.error ||
+            "신고 상태 변경에 실패했습니다."
+        );
+
+    }
+}
+
+
+// =========================
+// 게시글 삭제
+// =========================
+
+async function deleteAdminPost(id) {
+
+    if (
+        !confirm(
+            "정말 이 게시글을 삭제하시겠습니까?"
+        )
+    ) {
+        return;
+    }
+
+
+    const response =
+        await fetch(
+            `/api/admin?action=post&id=${id}`,
+            {
+                method: "DELETE",
+
+                headers:
+                    adminHeaders()
+            }
+        );
+
+
+    const data =
+        await response.json();
+
+
+    if (!response.ok) {
+
+        alert(
+            data.error ||
+            "게시글 삭제에 실패했습니다."
+        );
+
+        return;
+    }
+
+
+    alert(
+        "게시글이 삭제되었습니다."
+    );
+
+
+    loadPosts();
+    loadReports();
+}
+
+
+// =========================
+// 댓글 삭제
+// =========================
+
+async function deleteAdminComment(id) {
+
+    if (
+        !confirm(
+            "정말 이 댓글을 삭제하시겠습니까?"
+        )
+    ) {
+        return;
+    }
+
+
+    const response =
+        await fetch(
+            `/api/admin?action=comment&id=${id}`,
+            {
+                method: "DELETE",
+
+                headers:
+                    adminHeaders()
+            }
+        );
+
+
+    const data =
+        await response.json();
+
+
+    if (!response.ok) {
+
+        alert(
+            data.error ||
+            "댓글 삭제에 실패했습니다."
+        );
+
+        return;
+    }
+
+
+    alert(
+        "댓글이 삭제되었습니다."
+    );
+
+
+    loadComments();
+    loadReports();
+}
+
+
+// =========================
+// 로그아웃
+// =========================
+
+function logout() {
+
+    sessionStorage.removeItem(
+        tokenKey
+    );
+
 
     adminSection.classList.add(
         "hidden"
     );
 
-    logoutButton.style.display =
-        "none";
+    loginSection.classList.remove(
+        "hidden"
+    );
+
 }
 
 
@@ -190,17 +725,61 @@ function showAdmin() {
         "hidden"
     );
 
-    logoutButton.style.display =
-        "block";
 
-
-    loadAll();
+    loadReports();
+    loadPosts();
+    loadComments();
 
 }
 
 
 // =========================
-// 로그인
+// 로그인 확인
+// =========================
+
+async function checkLogin() {
+
+    if (!token()) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin?action=reports",
+                {
+                    headers:
+                        adminHeaders()
+                }
+            );
+
+
+        if (!response.ok) {
+
+            sessionStorage.removeItem(
+                tokenKey
+            );
+
+            return;
+        }
+
+
+        showAdmin();
+
+    } catch {
+
+        sessionStorage.removeItem(
+            tokenKey
+        );
+
+    }
+}
+
+
+// =========================
+// 로그인 이벤트
 // =========================
 
 loginForm.addEventListener(
@@ -214,45 +793,28 @@ loginForm.addEventListener(
             "로그인 중...";
 
 
-        const username =
-            document
-                .getElementById(
-                    "username"
-                )
-                .value
-                .trim();
-
-
-        const password =
-            document
-                .getElementById(
-                    "password"
-                )
-                .value;
-
-
         try {
 
-            const data =
-                await api(
-                    "/api/admin?action=login",
-                    {
-                        method: "POST",
-                        body: {
-                            username,
-                            password
-                        }
-                    }
-                );
+            await login(
 
+                document
+                    .getElementById(
+                        "username"
+                    )
+                    .value
+                    .trim(),
 
-            setToken(
-                data.token
+                document
+                    .getElementById(
+                        "password"
+                    )
+                    .value
+
             );
 
 
             loginMessage.textContent =
-                "로그인 성공";
+                "";
 
 
             showAdmin();
@@ -271,518 +833,13 @@ loginForm.addEventListener(
 
 
 // =========================
-// 로그아웃
+// 로그아웃 버튼
 // =========================
 
 logoutButton.addEventListener(
     "click",
-    () => {
-
-        removeToken();
-
-        showLogin();
-
-    }
+    logout
 );
-
-
-// =========================
-// 신고 불러오기
-// =========================
-
-async function loadReports() {
-
-    reports.innerHTML =
-        "불러오는 중...";
-
-
-    try {
-
-        const data =
-            await api(
-                "/api/admin?action=reports"
-            );
-
-
-        if (
-            !Array.isArray(data) ||
-            data.length === 0
-        ) {
-
-            reports.innerHTML =
-                "<p>신고가 없습니다.</p>";
-
-            return;
-        }
-
-
-        reports.innerHTML = "";
-
-
-        data.forEach(report => {
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "admin-item";
-
-
-            item.innerHTML = `
-                <div>
-                    <strong>
-                        신고 #${report.id}
-                    </strong>
-                </div>
-
-                <div>
-                    게시글:
-                    ${report.post_id ?? "-"}
-                    · 댓글:
-                    ${report.comment_id ?? "-"}
-                </div>
-
-                <div>
-                    사유:
-                    ${escapeHTML(
-                        report.reason
-                    )}
-                </div>
-
-                <div>
-                    상태:
-                    ${escapeHTML(
-                        report.status
-                    )}
-                </div>
-
-                <button
-                    data-id="${report.id}"
-                    data-status="resolved"
-                    class="report-resolve"
-                >
-                    처리
-                </button>
-
-                <button
-                    data-id="${report.id}"
-                    data-status="ignored"
-                    class="report-ignore"
-                >
-                    무시
-                </button>
-            `;
-
-
-            reports.appendChild(item);
-
-        });
-
-
-        document
-            .querySelectorAll(
-                ".report-resolve, .report-ignore"
-            )
-            .forEach(button => {
-
-                button.addEventListener(
-                    "click",
-                    async () => {
-
-                        await changeReport(
-                            button.dataset.id,
-                            button.dataset.status
-                        );
-
-                    }
-                );
-
-            });
-
-    }
-
-    catch (error) {
-
-        reports.innerHTML =
-            `<p>${escapeHTML(
-                error.message
-            )}</p>`;
-
-    }
-}
-
-
-// =========================
-// 신고 상태 변경
-// =========================
-
-async function changeReport(
-    id,
-    status
-) {
-
-    try {
-
-        await api(
-            `/api/admin?action=report&id=${id}`,
-            {
-                method: "PATCH",
-                body: {
-                    status
-                }
-            }
-        );
-
-
-        loadReports();
-
-    }
-
-    catch (error) {
-
-        alert(
-            error.message
-        );
-
-    }
-}
-
-
-// =========================
-// 게시글 불러오기
-// =========================
-
-async function loadPosts() {
-
-    adminPosts.innerHTML =
-        "불러오는 중...";
-
-
-    try {
-
-        const data =
-            await api(
-                "/api/admin?action=posts"
-            );
-
-
-        if (
-            !Array.isArray(data) ||
-            data.length === 0
-        ) {
-
-            adminPosts.innerHTML =
-                "<p>게시글이 없습니다.</p>";
-
-            return;
-        }
-
-
-        adminPosts.innerHTML = "";
-
-
-        data.forEach(post => {
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "admin-item";
-
-
-            item.innerHTML = `
-                <div>
-                    <strong>
-                        ${escapeHTML(
-                            post.title
-                        )}
-                    </strong>
-                </div>
-
-                <div>
-                    작성자:
-                    ${escapeHTML(
-                        post.author_name
-                    )}
-                </div>
-
-                <div>
-                    조회수:
-                    ${post.views}
-                </div>
-
-                <div>
-                    ${formatDate(
-                        post.created_at
-                    )}
-                </div>
-
-                <button
-                    class="delete-post"
-                    data-id="${post.id}"
-                >
-                    게시글 삭제
-                </button>
-            `;
-
-
-            adminPosts.appendChild(
-                item
-            );
-
-        });
-
-
-        document
-            .querySelectorAll(
-                ".delete-post"
-            )
-            .forEach(button => {
-
-                button.addEventListener(
-                    "click",
-                    async () => {
-
-                        const ok =
-                            confirm(
-                                "이 게시글을 삭제할까요?"
-                            );
-
-
-                        if (!ok) {
-                            return;
-                        }
-
-
-                        try {
-
-                            await api(
-                                `/api/admin?action=post&id=${button.dataset.id}`,
-                                {
-                                    method:
-                                        "DELETE"
-                                }
-                            );
-
-
-                            loadPosts();
-
-                        }
-
-                        catch (error) {
-
-                            alert(
-                                error.message
-                            );
-
-                        }
-
-                    }
-                );
-
-            });
-
-    }
-
-    catch (error) {
-
-        adminPosts.innerHTML =
-            `<p>${escapeHTML(
-                error.message
-            )}</p>`;
-
-    }
-}
-
-
-// =========================
-// 댓글 불러오기
-// =========================
-
-async function loadComments() {
-
-    adminComments.innerHTML =
-        "불러오는 중...";
-
-
-    try {
-
-        const data =
-            await api(
-                "/api/admin?action=comments"
-            );
-
-
-        if (
-            !Array.isArray(data) ||
-            data.length === 0
-        ) {
-
-            adminComments.innerHTML =
-                "<p>댓글이 없습니다.</p>";
-
-            return;
-        }
-
-
-        adminComments.innerHTML = "";
-
-
-        data.forEach(comment => {
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "admin-item";
-
-
-            item.innerHTML = `
-                <div>
-                    <strong>
-                        댓글 #${comment.id}
-                    </strong>
-                </div>
-
-                <div>
-                    게시글:
-                    ${comment.post_id}
-                </div>
-
-                <div>
-                    작성자:
-                    ${escapeHTML(
-                        comment.author_name
-                    )}
-                </div>
-
-                <div>
-                    ${escapeHTML(
-                        comment.content
-                    )}
-                </div>
-
-                <div>
-                    ${formatDate(
-                        comment.created_at
-                    )}
-                </div>
-
-                <button
-                    class="delete-comment"
-                    data-id="${comment.id}"
-                >
-                    댓글 삭제
-                </button>
-            `;
-
-
-            adminComments.appendChild(
-                item
-            );
-
-        });
-
-
-        document
-            .querySelectorAll(
-                ".delete-comment"
-            )
-            .forEach(button => {
-
-                button.addEventListener(
-                    "click",
-                    async () => {
-
-                        const ok =
-                            confirm(
-                                "이 댓글을 삭제할까요?"
-                            );
-
-
-                        if (!ok) {
-                            return;
-                        }
-
-
-                        try {
-
-                            await api(
-                                `/api/admin?action=comment&id=${button.dataset.id}`,
-                                {
-                                    method:
-                                        "DELETE"
-                                }
-                            );
-
-
-                            loadComments();
-
-                        }
-
-                        catch (error) {
-
-                            alert(
-                                error.message
-                            );
-
-                        }
-
-                    }
-                );
-
-            });
-
-    }
-
-    catch (error) {
-
-        adminComments.innerHTML =
-            `<p>${escapeHTML(
-                error.message
-            )}</p>`;
-
-    }
-}
-
-
-// =========================
-// 전체 불러오기
-// =========================
-
-async function loadAll() {
-
-    await Promise.all([
-        loadReports(),
-        loadPosts(),
-        loadComments()
-    ]);
-
-}
-
-
-// =========================
-// HTML escape
-// =========================
-
-function escapeHTML(text) {
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-    div.textContent =
-        text ?? "";
-
-    return div.innerHTML;
-}
 
 
 // =========================
@@ -792,9 +849,7 @@ function escapeHTML(text) {
 function formatDate(date) {
 
     return new Date(date)
-        .toLocaleString(
-            "ko-KR"
-        );
+        .toLocaleString("ko-KR");
 
 }
 
@@ -807,12 +862,18 @@ logoutButton.style.display =
     "none";
 
 
-if (getToken()) {
+if (token()) {
 
     showAdmin();
 
 } else {
 
-    showLogin();
+    loginSection.classList.remove(
+        "hidden"
+    );
+
+    adminSection.classList.add(
+        "hidden"
+    );
 
 }
