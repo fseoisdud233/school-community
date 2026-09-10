@@ -6,7 +6,13 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+
+// =========================
+// 관리자 토큰 생성
+// =========================
+
 function createToken(username) {
+
     const payload = {
         username,
         exp: Date.now() + 1000 * 60 * 60 * 12
@@ -17,16 +23,28 @@ function createToken(username) {
     ).toString("base64url");
 
     const signature = crypto
-        .createHmac("sha256", process.env.ADMIN_SECRET)
+        .createHmac(
+            "sha256",
+            process.env.ADMIN_SECRET
+        )
         .update(text)
         .digest("base64url");
 
     return `${text}.${signature}`;
 }
 
+
+// =========================
+// 관리자 토큰 확인
+// =========================
+
 function verifyToken(token) {
+
     try {
-        if (!token) return null;
+
+        if (!token) {
+            return null;
+        }
 
         const parts = token.split(".");
 
@@ -37,26 +55,40 @@ function verifyToken(token) {
         const [text, signature] = parts;
 
         const expected = crypto
-            .createHmac("sha256", process.env.ADMIN_SECRET)
+            .createHmac(
+                "sha256",
+                process.env.ADMIN_SECRET
+            )
             .update(text)
             .digest("base64url");
 
+
+        const a = Buffer.from(signature);
+        const b = Buffer.from(expected);
+
         if (
-            !crypto.timingSafeEqual(
-                Buffer.from(signature),
-                Buffer.from(expected)
-            )
+            a.length !== b.length ||
+            !crypto.timingSafeEqual(a, b)
         ) {
             return null;
         }
 
+
         const payload = JSON.parse(
-            Buffer.from(text, "base64url").toString()
+            Buffer.from(
+                text,
+                "base64url"
+            ).toString()
         );
 
-        if (payload.exp < Date.now()) {
+
+        if (
+            !payload.exp ||
+            payload.exp < Date.now()
+        ) {
             return null;
         }
+
 
         if (
             payload.username !==
@@ -65,29 +97,50 @@ function verifyToken(token) {
             return null;
         }
 
+
         return payload;
 
     } catch {
+
         return null;
+
     }
 }
 
-function getToken(req) {
-    const header = req.headers.authorization || "";
 
-    if (!header.startsWith("Bearer ")) {
+// =========================
+// 토큰 가져오기
+// =========================
+
+function getToken(req) {
+
+    const header =
+        req.headers.authorization || "";
+
+    if (
+        !header.startsWith("Bearer ")
+    ) {
         return null;
     }
 
     return header.slice(7);
 }
 
+
+// =========================
+// 관리자 인증
+// =========================
+
 function requireAdmin(req, res) {
-    const payload = verifyToken(
-        getToken(req)
-    );
+
+    const payload =
+        verifyToken(
+            getToken(req)
+        );
+
 
     if (!payload) {
+
         res.status(401).json({
             error: "관리자 인증이 필요합니다."
         });
@@ -95,49 +148,86 @@ function requireAdmin(req, res) {
         return null;
     }
 
+
     return payload;
 }
 
-export default async function handler(req, res) {
-    try {
-        const action = req.query.action;
 
-        // 관리자 로그인
+// =========================
+// API
+// =========================
+
+export default async function handler(req, res) {
+
+    try {
+
+        const action =
+            req.query.action;
+
+
+        // =========================
+        // 로그인
+        // =========================
+
         if (
             req.method === "POST" &&
             action === "login"
         ) {
+
             const {
                 username,
                 password
             } = req.body || {};
 
+
             if (
-                username !== process.env.ADMIN_USERNAME ||
-                password !== process.env.ADMIN_PASSWORD
+                username !==
+                    process.env.ADMIN_USERNAME ||
+                password !==
+                    process.env.ADMIN_PASSWORD
             ) {
+
                 return res.status(401).json({
-                    error: "아이디 또는 비밀번호가 틀렸습니다."
+                    error:
+                        "아이디 또는 비밀번호가 틀렸습니다."
                 });
+
             }
 
+
             return res.status(200).json({
-                token: createToken(username)
+                token:
+                    createToken(username)
             });
         }
 
-        const admin = requireAdmin(req, res);
+
+        // =========================
+        // 관리자 인증
+        // =========================
+
+        const admin =
+            requireAdmin(req, res);
+
 
         if (!admin) {
             return;
         }
 
+
+        // =========================
         // 신고 목록
+        // =========================
+
         if (
             req.method === "GET" &&
             action === "reports"
         ) {
-            const { data, error } = await supabase
+
+            const {
+                data,
+                error
+            } = await supabase
                 .from("reports")
                 .select(`
                     id,
@@ -147,156 +237,378 @@ export default async function handler(req, res) {
                     status,
                     created_at
                 `)
-                .order("created_at", {
-                    ascending: false
-                })
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
                 .limit(500);
 
+
             if (error) {
+
+                console.error(error);
+
                 return res.status(500).json({
-                    error: "신고 목록을 불러오지 못했습니다."
+                    error:
+                        "신고 목록을 불러오지 못했습니다."
                 });
+
             }
 
-            return res.status(200).json(data);
+
+            return res.status(200).json(
+                data
+            );
         }
 
+
+        // =========================
+        // 게시글 목록
+        // =========================
+
+        if (
+            req.method === "GET" &&
+            action === "posts"
+        ) {
+
+            const {
+                data,
+                error
+            } = await supabase
+                .from("posts")
+                .select(`
+                    id,
+                    author_name,
+                    title,
+                    content,
+                    views,
+                    media_type,
+                    created_at
+                `)
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(500);
+
+
+            if (error) {
+
+                console.error(error);
+
+                return res.status(500).json({
+                    error:
+                        "게시글 목록을 불러오지 못했습니다."
+                });
+
+            }
+
+
+            return res.status(200).json(
+                data
+            );
+        }
+
+
+        // =========================
+        // 댓글 목록
+        // =========================
+
+        if (
+            req.method === "GET" &&
+            action === "comments"
+        ) {
+
+            const {
+                data,
+                error
+            } = await supabase
+                .from("comments")
+                .select(`
+                    id,
+                    post_id,
+                    author_name,
+                    content,
+                    created_at
+                `)
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(1000);
+
+
+            if (error) {
+
+                console.error(error);
+
+                return res.status(500).json({
+                    error:
+                        "댓글 목록을 불러오지 못했습니다."
+                });
+
+            }
+
+
+            return res.status(200).json(
+                data
+            );
+        }
+
+
+        // =========================
         // 신고 상태 변경
+        // =========================
+
         if (
             req.method === "PATCH" &&
             action === "report"
         ) {
-            const id = Number(req.query.id);
-            const status = req.body?.status;
+
+            const id =
+                Number(req.query.id);
+
+            const status =
+                req.body?.status;
+
 
             if (!Number.isInteger(id)) {
+
                 return res.status(400).json({
-                    error: "잘못된 신고입니다."
+                    error:
+                        "잘못된 신고입니다."
                 });
+
             }
+
 
             if (
-                !["pending", "resolved", "ignored"]
-                    .includes(status)
+                ![
+                    "pending",
+                    "resolved",
+                    "ignored"
+                ].includes(status)
             ) {
+
                 return res.status(400).json({
-                    error: "잘못된 상태입니다."
+                    error:
+                        "잘못된 상태입니다."
                 });
+
             }
 
-            const { error } = await supabase
+
+            const {
+                error
+            } = await supabase
                 .from("reports")
                 .update({
                     status
                 })
-                .eq("id", id);
+                .eq(
+                    "id",
+                    id
+                );
+
 
             if (error) {
+
+                console.error(error);
+
                 return res.status(500).json({
-                    error: "신고 상태 변경 실패"
+                    error:
+                        "신고 상태 변경 실패"
                 });
+
             }
+
 
             return res.status(200).json({
                 success: true
             });
         }
 
+
+        // =========================
         // 게시글 삭제
+        // =========================
+
         if (
             req.method === "DELETE" &&
             action === "post"
         ) {
-            const id = Number(req.query.id);
+
+            const id =
+                Number(req.query.id);
+
 
             if (!Number.isInteger(id)) {
+
                 return res.status(400).json({
-                    error: "잘못된 게시글입니다."
+                    error:
+                        "잘못된 게시글입니다."
                 });
+
             }
 
-            const { data: post } = await supabase
+
+            const {
+                data: post
+            } = await supabase
                 .from("posts")
                 .select("media_url")
-                .eq("id", id)
+                .eq(
+                    "id",
+                    id
+                )
                 .single();
 
-            const { error } = await supabase
+
+            const {
+                error
+            } = await supabase
                 .from("posts")
                 .delete()
-                .eq("id", id);
+                .eq(
+                    "id",
+                    id
+                );
+
 
             if (error) {
+
+                console.error(error);
+
                 return res.status(500).json({
-                    error: "게시글 삭제 실패"
+                    error:
+                        "게시글 삭제 실패"
                 });
+
             }
 
+
             // Storage 파일 삭제
+
             if (post?.media_url) {
+
                 try {
-                    const marker = "/media/";
+
+                    const marker =
+                        "/media/";
+
                     const index =
-                        post.media_url.indexOf(marker);
+                        post.media_url
+                            .indexOf(marker);
+
 
                     if (index !== -1) {
+
                         const path =
-                            post.media_url.slice(
-                                index + marker.length
-                            );
+                            post.media_url
+                                .slice(
+                                    index +
+                                    marker.length
+                                );
+
 
                         await supabase.storage
                             .from("media")
-                            .remove([path]);
+                            .remove([
+                                path
+                            ]);
                     }
+
                 } catch (e) {
+
                     console.error(e);
+
                 }
             }
+
 
             return res.status(200).json({
                 success: true
             });
         }
 
+
+        // =========================
         // 댓글 삭제
+        // =========================
+
         if (
             req.method === "DELETE" &&
             action === "comment"
         ) {
-            const id = Number(req.query.id);
+
+            const id =
+                Number(req.query.id);
+
 
             if (!Number.isInteger(id)) {
+
                 return res.status(400).json({
-                    error: "잘못된 댓글입니다."
+                    error:
+                        "잘못된 댓글입니다."
                 });
+
             }
 
-            const { error } = await supabase
+
+            const {
+                error
+            } = await supabase
                 .from("comments")
                 .delete()
-                .eq("id", id);
+                .eq(
+                    "id",
+                    id
+                );
+
 
             if (error) {
+
+                console.error(error);
+
                 return res.status(500).json({
-                    error: "댓글 삭제 실패"
+                    error:
+                        "댓글 삭제 실패"
                 });
+
             }
+
 
             return res.status(200).json({
                 success: true
             });
         }
 
+
+        // =========================
+        // 알 수 없는 명령
+        // =========================
+
         return res.status(400).json({
-            error: "알 수 없는 관리자 명령입니다."
+            error:
+                "알 수 없는 관리자 명령입니다."
         });
 
-    } catch (error) {
+    }
+
+    catch (error) {
+
         console.error(error);
 
         return res.status(500).json({
-            error: "관리자 API 오류"
+            error:
+                "관리자 API 오류"
         });
+
     }
 }
