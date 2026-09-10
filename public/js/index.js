@@ -7,11 +7,16 @@ async function loadPosts(query = "") {
 
     try {
         const url = query
-            ? `/api/posts?search=${encodeURIComponent(query)}`
+            ? `/api/posts?q=${encodeURIComponent(query)}`
             : "/api/posts";
 
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            cache: "no-store"
+        });
+
         const data = await res.json();
+
+        console.log("게시글 데이터:", data);
 
         if (!res.ok) {
             throw new Error(data.error || "게시글을 불러오지 못했습니다.");
@@ -19,18 +24,21 @@ async function loadPosts(query = "") {
 
         postList.innerHTML = "";
 
-        if (!data.posts || data.posts.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
             postList.innerHTML = "<p>게시글이 없습니다.</p>";
             return;
         }
 
-        data.posts.forEach(post => {
+        data.forEach(post => {
             const item = document.createElement("div");
             item.className = "post-item";
 
             item.innerHTML = `
                 <a href="/post.html?id=${post.id}">
-                    <div class="post-title">${escapeHTML(post.title)}</div>
+                    <div class="post-title">
+                        ${escapeHTML(post.title)}
+                    </div>
+
                     <div class="post-info">
                         ${escapeHTML(post.author_name)}
                         · 조회 ${post.views}
@@ -44,8 +52,13 @@ async function loadPosts(query = "") {
 
     } catch (error) {
         console.error(error);
-        postList.innerHTML =
-            `<p>게시글을 불러오지 못했습니다.<br>${escapeHTML(error.message)}</p>`;
+
+        postList.innerHTML = `
+            <p>
+                게시글을 불러오지 못했습니다.<br>
+                ${escapeHTML(error.message)}
+            </p>
+        `;
     }
 }
 
@@ -59,14 +72,18 @@ function formatDate(date) {
     return new Date(date).toLocaleString("ko-KR");
 }
 
-searchButton?.addEventListener("click", () => {
-    loadPosts(searchInput.value.trim());
-});
+if (searchButton) {
+    searchButton.addEventListener("click", () => {
+        loadPosts(searchInput?.value.trim() || "");
+    });
+}
 
-searchInput?.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-        loadPosts(searchInput.value.trim());
-    }
-});
+if (searchInput) {
+    searchInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            loadPosts(searchInput.value.trim());
+        }
+    });
+}
 
 loadPosts();
