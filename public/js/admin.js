@@ -1,3 +1,4 @@
+```javascript
 const loginSection = document.getElementById("loginSection");
 const adminSection = document.getElementById("adminSection");
 
@@ -13,9 +14,9 @@ const adminComments = document.getElementById("adminComments");
 const tokenKey = "school_admin_token";
 
 
-// ==============================
+// ========================================
 // 토큰
-// ==============================
+// ========================================
 
 function token() {
     return sessionStorage.getItem(tokenKey);
@@ -29,9 +30,9 @@ function adminHeaders() {
 }
 
 
-// ==============================
-// HTML 이스케이프
-// ==============================
+// ========================================
+// HTML 보안 처리
+// ========================================
 
 function escapeHTML(value) {
     return String(value ?? "")
@@ -43,9 +44,9 @@ function escapeHTML(value) {
 }
 
 
-// ==============================
+// ========================================
 // 날짜
-// ==============================
+// ========================================
 
 function formatDate(date) {
     const d = new Date(date);
@@ -58,9 +59,9 @@ function formatDate(date) {
 }
 
 
-// ==============================
+// ========================================
 // 로그인
-// ==============================
+// ========================================
 
 async function login(username, password) {
 
@@ -107,9 +108,9 @@ async function login(username, password) {
 }
 
 
-// ==============================
+// ========================================
 // 신고 불러오기
-// ==============================
+// ========================================
 
 async function loadReports() {
 
@@ -153,6 +154,7 @@ async function loadReports() {
             !Array.isArray(data) ||
             data.length === 0
         ) {
+
             reports.innerHTML =
                 `<div class="empty">신고가 없습니다.</div>`;
 
@@ -161,16 +163,16 @@ async function loadReports() {
 
         reports.innerHTML = data.map(report => {
 
-            let target = "";
+            let target = "알 수 없음";
 
             if (report.post_id) {
                 target =
                     `게시글 #${report.post_id}`;
-            } else if (report.comment_id) {
+            }
+
+            if (report.comment_id) {
                 target =
                     `댓글 #${report.comment_id}`;
-            } else {
-                target = "알 수 없음";
             }
 
             return `
@@ -269,9 +271,9 @@ async function loadReports() {
 }
 
 
-// ==============================
+// ========================================
 // 게시글 불러오기
-// ==============================
+// ========================================
 
 async function loadPosts() {
 
@@ -279,9 +281,7 @@ async function loadPosts() {
 
     try {
 
-        console.log(
-            "게시글 요청 시작"
-        );
+        console.log("게시글 요청 시작");
 
         const response = await fetch(
             "/api/admin?action=posts",
@@ -292,7 +292,7 @@ async function loadPosts() {
         );
 
         console.log(
-            "게시글 응답:",
+            "게시글 응답 상태:",
             response.status
         );
 
@@ -308,6 +308,7 @@ async function loadPosts() {
         try {
             data = JSON.parse(text);
         } catch {
+
             console.error(
                 "게시글 서버 응답:",
                 text
@@ -329,6 +330,7 @@ async function loadPosts() {
             !Array.isArray(data) ||
             data.length === 0
         ) {
+
             adminPosts.innerHTML =
                 `<div class="empty">게시글이 없습니다.</div>`;
 
@@ -412,9 +414,9 @@ async function loadPosts() {
 }
 
 
-// ==============================
+// ========================================
 // 댓글 불러오기
-// ==============================
+// ========================================
 
 async function loadComments() {
 
@@ -422,9 +424,7 @@ async function loadComments() {
 
     try {
 
-        console.log(
-            "댓글 요청 시작"
-        );
+        console.log("댓글 요청 시작");
 
         const response = await fetch(
             "/api/admin?action=comments",
@@ -435,7 +435,7 @@ async function loadComments() {
         );
 
         console.log(
-            "댓글 응답:",
+            "댓글 응답 상태:",
             response.status
         );
 
@@ -451,6 +451,7 @@ async function loadComments() {
         try {
             data = JSON.parse(text);
         } catch {
+
             console.error(
                 "댓글 서버 응답:",
                 text
@@ -472,6 +473,7 @@ async function loadComments() {
             !Array.isArray(data) ||
             data.length === 0
         ) {
+
             adminComments.innerHTML =
                 `<div class="empty">댓글이 없습니다.</div>`;
 
@@ -542,9 +544,9 @@ async function loadComments() {
 }
 
 
-// ==============================
+// ========================================
 // 신고 처리
-// ==============================
+// ========================================
 
 async function resolveReport(id) {
 
@@ -568,10 +570,7 @@ async function ignoreReport(id) {
 }
 
 
-async function updateReport(
-    id,
-    status
-) {
+async function updateReport(id, status) {
 
     try {
 
@@ -619,9 +618,9 @@ async function updateReport(
 }
 
 
-// ==============================
-// 관리자 게시글 삭제
-// ==============================
+// ========================================
+// 게시글 삭제
+// ========================================
 
 async function deleteAdminPost(id) {
 
@@ -639,7 +638,6 @@ async function deleteAdminPost(id) {
             `/api/admin?action=post&id=${id}`,
             {
                 method: "DELETE",
-
                 headers: adminHeaders()
             }
         );
@@ -682,9 +680,9 @@ async function deleteAdminPost(id) {
 }
 
 
-// ==============================
-// 관리자 댓글 삭제
-// ==============================
+// ========================================
+// 댓글 삭제
+// ========================================
 
 async function deleteAdminComment(id) {
 
@@ -702,7 +700,6 @@ async function deleteAdminComment(id) {
             `/api/admin?action=comment&id=${id}`,
             {
                 method: "DELETE",
-
                 headers: adminHeaders()
             }
         );
@@ -745,9 +742,9 @@ async function deleteAdminComment(id) {
 }
 
 
-// ==============================
+// ========================================
 // 로그아웃
-// ==============================
+// ========================================
 
 function logout() {
 
@@ -767,9 +764,9 @@ function logout() {
 }
 
 
-// ==============================
-// 관리자 화면 표시
-// ==============================
+// ========================================
+// 관리자 화면
+// ========================================
 
 function showAdmin() {
 
@@ -781,16 +778,16 @@ function showAdmin() {
         "hidden"
     );
 
-    // 중요
+    // 반드시 3개 모두 실행
     loadReports();
     loadPosts();
     loadComments();
 }
 
 
-// ==============================
-// 기존 로그인 확인
-// ==============================
+// ========================================
+// 로그인 상태 확인
+// ========================================
 
 async function checkLogin() {
 
@@ -842,9 +839,9 @@ async function checkLogin() {
 }
 
 
-// ==============================
+// ========================================
 // 로그인 이벤트
-// ==============================
+// ========================================
 
 loginForm.addEventListener(
     "submit",
@@ -891,9 +888,9 @@ loginForm.addEventListener(
 );
 
 
-// ==============================
+// ========================================
 // 로그아웃 버튼
-// ==============================
+// ========================================
 
 logoutButton.addEventListener(
     "click",
@@ -901,8 +898,9 @@ logoutButton.addEventListener(
 );
 
 
-// ==============================
+// ========================================
 // 시작
-// ==============================
+// ========================================
 
 checkLogin();
+```
