@@ -28,6 +28,7 @@ async function loadPosts(query = "") {
 
         postList.innerHTML = "";
 
+        // API는 배열을 직접 반환함
         if (!Array.isArray(data) || data.length === 0) {
             postList.innerHTML = "<p>게시글이 없습니다.</p>";
             return;
@@ -78,26 +79,22 @@ function formatDate(date) {
 
 
 // 검색
-if (searchForm) {
-    searchForm.addEventListener("submit", event => {
-        event.preventDefault();
+searchForm?.addEventListener("submit", event => {
+    event.preventDefault();
 
-        const query = searchInput.value.trim();
+    const query = searchInput.value.trim();
 
-        loadPosts(query);
-    });
-}
+    loadPosts(query);
+});
 
 
 // 전체글
-if (resetButton) {
-    resetButton.addEventListener("click", () => {
-        searchInput.value = "";
-        loadPosts();
-    });
-}
+resetButton?.addEventListener("click", () => {
+    searchInput.value = "";
+    loadPosts();
+});
 
 
-// 처음 접속했을 때 전체 게시글 불러오기
+// 페이지 처음 열었을 때
 loadPosts();
 ```
