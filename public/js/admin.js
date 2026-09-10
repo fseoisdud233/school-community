@@ -1,4 +1,4 @@
-```javascript
+
 const loginSection = document.getElementById("loginSection");
 const adminSection = document.getElementById("adminSection");
 
